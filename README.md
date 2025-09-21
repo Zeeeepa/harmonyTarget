@@ -1,4 +1,4 @@
-# VulnerableAppDemo21
+# HarmonyTarget
 
 一个专为安全培训打造的 HarmonyOS NEXT 示范应用。项目刻意实现了多种常见的移动端安全漏洞，用来演示在 ArkTS 代码中漏洞是如何产生、如何被发现以及潜在的风险点。
 
