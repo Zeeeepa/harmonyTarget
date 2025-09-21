@@ -15,6 +15,10 @@
 - 模拟安全支付流程：截屏、防窥、输入保护等场景演练
 - 导出的 `SecretAbility` 页面可被外部组件直接拉起
 
+<img width="288" height="638" alt="image" src="https://github.com/user-attachments/assets/154ecae2-4de3-4ec5-9a8f-18b3f005e98d" />
+<img width="288" height="646" alt="image" src="https://github.com/user-attachments/assets/5665359d-ddc1-433e-ac62-43489f9eb372" />
+
+
 ## 项目结构
 
 ```
