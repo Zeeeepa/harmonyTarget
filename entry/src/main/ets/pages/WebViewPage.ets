@@ -1,10 +1,11 @@
+import { promptAction, PromptAction } from '@kit.ArkUI';
 import web from '@ohos.web.webview';
 import { BusinessError } from '@kit.BasicServicesKit';
+import { InfoCard } from '../common/components/InfoCard';
+import { SectionHeader } from '../common/components/SectionHeader';
 
-// VULNERABILITY: 暴露给JS的原生对象
 class JsBridge {
   getSensitiveInfo(): string {
-    // 模拟返回敏感信息
     return `设备SN: MOCK_SN_1234567890, API_Level: ${globalThis.ohos_api_version}`;
   }
 }
@@ -12,21 +13,29 @@ class JsBridge {
 @Entry
 @Component
 struct WebViewPage {
-  @State urlInput: string = 'https://www.bing.com';
+  @State urlInput: string = 'https://www.baidu.com';
+  @State currentMode: 'insecure' | 'secure' = 'insecure';
   webviewController: web.WebviewController = new web.WebviewController();
 
   aboutToAppear() {
-    try {
-      this.webviewController.registerJavaScriptProxy(new JsBridge(), 'nativeBridge', ['*']);
-    } catch (error) {
-      const err = error as BusinessError;
-      console.error(`registerJavaScriptProxy failed, code is ${err.code}, message is ${err.message}`);
-    }
+    this.configureBridge();
   }
 
   build() {
     Column() {
-      Text('WebView 漏洞集合').fontSize(24).fontWeight(FontWeight.Bold).padding({ top: 20, bottom: 10 })
+      SectionHeader('WebView 漏洞集合')
+
+      Row({ space: 10 }) {
+        this.renderModeButton('无防护', 'insecure');
+        this.renderModeButton('安全配置', 'secure');
+      }.width('90%').padding({ bottom: 10 })
+
+      InfoCard({
+        body: this.currentMode === 'insecure'
+          ? '原因：原生对象暴露给任意源页面，输入任何 URL 都能执行 nativeBridge.* 方法。'
+          : '做法：限制 URL 白名单，仅暴露必要方法，同时拦截可疑 Scheme。',
+        tone: this.currentMode === 'insecure' ? 'warning' : 'success'
+      })
 
       Row({ space: 10 }) {
         TextInput({ placeholder: '输入任意URL并加载', text: this.urlInput })
@@ -34,28 +43,82 @@ struct WebViewPage {
           .layoutWeight(1)
         Button('加载')
           .onClick(() => {
-            // VULNERABILITY: 未对URL进行任何校验，直接加载
-            this.webviewController.loadUrl(this.urlInput);
+            if (this.currentMode === 'insecure') {
+              this.webviewController.loadUrl(this.urlInput);
+              return;
+            }
+            if (this.isUrlAllowed(this.urlInput)) {
+              this.webviewController.loadUrl(this.urlInput);
+            } else {
+              this.showBlockedToast();
+            }
           })
-      }.width('90%').padding({ bottom: 10 })
+      }.width('90%')
 
       Web({ src: $rawfile('vuln.html'), controller: this.webviewController })
         .javaScriptAccess(true)
         .onControllerAttached(() => {
-          this.webviewController.registerJavaScriptProxy(
-            new JsBridge(),
-            'nativeBridge',
-            ['getSensitiveInfo']   // 方法名写全
-          );
+          this.configureBridge();
         })
         .layoutWeight(1)
 
-      Text('操作指引：\n1. H5页面已加载。\n2. 点击H5页面的按钮，它会通过JS调用原生代码获取信息。\n3. 尝试使用Chrome DevTools远程调试，或通过注入JS代码来调用 `nativeBridge.getSensitiveInfo()` 方法。\n4. 任意URL加载: 在上方输入框输入恶意网址或file://协议路径进行测试。')
-        .padding(15)
-        .backgroundColor('#f0f0f0')
-        .borderRadius(10)
-        .margin(20)
+      Column() {
+        InfoCard({
+          title: '操作指引',
+          body: this.currentMode === 'insecure'
+            ? '1. 在输入框填入 file:// 或恶意站点，仍可加载。\n2. 打开调试工具执行 nativeBridge.getSensitiveInfo()，可直接拿到敏感数据。'
+            : '1. 尝试加载非白名单 URL，应用将拒绝。\n2. 在 JS 中访问未授权方法将抛出异常，观察 native 侧日志。',
+          tone: 'default'
+        })
+      }
+      .margin(20)
     }
     .width('100%').height('100%')
+  }
+
+  configureBridge() {
+    interface WebviewControllerExt {
+      deregisterJavaScriptProxy?: (name: string) => void;
+    }
+
+    const controller = this.webviewController as WebviewControllerExt;
+    if (controller.deregisterJavaScriptProxy) {
+      try {
+        controller.deregisterJavaScriptProxy('nativeBridge');
+      } catch (_) {
+        // ignore if proxy not registered
+      }
+    }
+    try {
+      const exposedMethods = this.currentMode === 'insecure' ? ['*'] : ['getSensitiveInfo'];
+      this.webviewController.registerJavaScriptProxy(new JsBridge(), 'nativeBridge', exposedMethods);
+    } catch (error) {
+      const err = error as BusinessError;
+      console.error(`registerJavaScriptProxy failed, code is ${err.code}, message is ${err.message}`);
+    }
+  }
+
+  isUrlAllowed(url: string): boolean {
+    const allowedHosts = ['www.bing.com', 'cn.bing.com', 'localhost'];
+    if (!url || !url.startsWith('https://')) {
+      return false;
+    }
+    const host = url.substring('https://'.length).split('/')[0];
+    return allowedHosts.indexOf(host) >= 0;
+  }
+
+  showBlockedToast() {
+    this.getUIContext().getPromptAction().showToast({ message: 'URL 不在白名单，已阻止加载' });
+  }
+
+  @Builder
+  renderModeButton(label: string, mode: 'insecure' | 'secure') {
+    Button(label)
+      .backgroundColor(this.currentMode === mode ? '#007DFF' : '#e0e0e0')
+      .fontColor(this.currentMode === mode ? Color.White : Color.Black)
+      .onClick(() => {
+        this.currentMode = mode;
+        this.configureBridge();
+      });
   }
 }

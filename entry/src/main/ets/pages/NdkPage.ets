@@ -1,5 +1,7 @@
-import entry from 'libentry.so';
 import cryptoFramework from '@ohos.security.cryptoFramework';
+import { InfoCard } from '../common/components/InfoCard';
+import { SectionHeader } from '../common/components/SectionHeader';
+import { NativeKeyService } from '../features/native/nativeKeyService';
 
 @Entry
 @Component
@@ -8,6 +10,8 @@ struct NdkPage {
   @State errorMessage: string = '';
   @State inputText: string = '';
   @State encryptedText: string = '';
+  @State currentMode: 'insecure' | 'secure' = 'insecure';
+  private readonly keyService: NativeKeyService = new NativeKeyService();
 
   // 使用 HarmonyOS 加密框架 SM4(ECB/PKCS7) 加密并返回 HEX 字符串
   private encryptWithKey(plain: string, key: string): string {
@@ -74,13 +78,29 @@ struct NdkPage {
 
   build() {
     Column({ space: 20 }) {
-      Text('SO原生库漏洞').fontSize(24).fontWeight(FontWeight.Bold).margin({ bottom: 20 })
+      SectionHeader('SO原生库漏洞')
 
-      Button('从.so文件获取密钥')
-        .onClick(() => {
+      Row({ space: 10 }) {
+        this.renderModeButton('硬编码原生密钥', 'insecure');
+        this.renderModeButton('服务端密钥分发', 'secure');
+      }
+
+      InfoCard({
+        body: this.currentMode === 'insecure'
+          ? '原因：libentry.so 中硬编码密钥，逆向 SO 即可恢复。'
+          : '做法：ArkTS 通过服务端 APIs 动态请求密钥，原生模块不再持久化敏感值。',
+        tone: this.currentMode === 'insecure' ? 'warning' : 'success'
+      })
+
+      Button(this.currentMode === 'insecure' ? '从.so文件获取密钥' : '向服务端请求密钥')
+        .onClick(async () => {
           try {
-            // 2. 调用NAPI函数
-            this.nativeKey = entry.getSecretKeyFromNative();
+            if (this.currentMode === 'insecure') {
+              this.nativeKey = this.keyService.fetchHardcodedKey();
+            } else {
+              await this.requestSecureKey();
+              return;
+            }
             this.errorMessage = '';
           } catch (error) {
             console.error('调用native方法失败:', error);
@@ -141,13 +161,41 @@ struct NdkPage {
           .fontSize(14)
       }
 
-      Text('操作指引：\n请反编译本应用的HAP包，找到 lib/arm64-v8a/libentry.so 文件。使用IDA, Ghidra等工具分析该文件，即可找到硬编码的密钥字符串。\n\n注意：在HarmonyOS Next中，需要在oh-package.json5中正确配置native模块。')
-        .padding(15)
-        .backgroundColor('#f0f0f0')
-        .borderRadius(10)
-        .margin({ top: 30 })
+      Column() {
+        InfoCard({
+          title: '操作指引',
+          body: this.currentMode === 'insecure'
+            ? '1. 反编译 HAP，使用 IDA/Ghidra 查看 libentry.so，定位字符串常量。\n2. 结合 ArkTS 页面观察同一个密钥被直接使用。'
+            : '1. 切换至"服务端密钥分发"后，libentry.so 中不再出现明文密钥。\n2. 可扩展为调用 TLS 通道，通过设备证书鉴权。',
+          tone: 'default'
+        })
+      }
+      .margin({ top: 30 })
     }
     .padding(20)
     .width('100%')
+  }
+
+  async requestSecureKey() {
+    try {
+      this.errorMessage = '';
+      this.nativeKey = await this.keyService.fetchRemoteKey();
+    } catch (error) {
+      console.error('远程获取密钥失败:', error);
+      this.errorMessage = `远程密钥错误: ${error}`;
+    }
+  }
+
+  @Builder
+  renderModeButton(label: string, mode: 'insecure' | 'secure') {
+    Button(label)
+      .backgroundColor(this.currentMode === mode ? '#007DFF' : '#e0e0e0')
+      .fontColor(this.currentMode === mode ? Color.White : Color.Black)
+      .onClick(() => {
+        this.currentMode = mode;
+        if (mode === 'secure') {
+          this.nativeKey = '点击按钮获取';
+        }
+      });
   }
 }

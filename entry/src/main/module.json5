@@ -45,6 +45,9 @@
     "requestPermissions": [
       {
         "name": "ohos.permission.INTERNET" // <-- 漏洞点：请求网络权限以使用HTTP
+      },
+      {
+        "name": "ohos.permission.PRIVACY_WINDOW"
       }
     ]
   }

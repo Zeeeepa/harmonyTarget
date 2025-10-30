@@ -1,5 +1,7 @@
+import { promptAction, PromptAction } from '@kit.ArkUI';
 import window from '@ohos.window';
-import promptAction from '@ohos.promptAction';
+import { InfoCard } from '../common/components/InfoCard';
+import { SectionHeader } from '../common/components/SectionHeader';
 
 @Entry
 @Component
@@ -12,7 +14,7 @@ struct SecurePaymentPage {
       this.win = windowClass;
       // VULNERABILITY (from a feature perspective): 开启防截屏
       await this.win.setWindowPrivacyMode(true);
-      promptAction.showToast({ message: '防截屏模式已开启' });
+      this.getUIContext().getPromptAction().showToast({ message: '防截屏模式已开启' });
     } catch (exception) {
       console.error('Failed to set privacy mode. Cause: ' + JSON.stringify(exception));
     }
@@ -31,7 +33,12 @@ struct SecurePaymentPage {
 
   build() {
     Column({ space: 20 }) {
-      Text('模拟支付 (安全特性)').fontSize(24).fontWeight(FontWeight.Bold).margin({ bottom: 20 })
+      SectionHeader('模拟支付 (安全特性)')
+
+      InfoCard({
+        body: '场景：展示如何打开防录屏、使用安全键盘、在支付场景保持前台保护。未开启这些能力会导致截屏泄露、键盘被劫持等风险。',
+        tone: 'success'
+      })
 
       Text('支付金额').width('100%').textAlign(TextAlign.Start)
       TextInput({ text: '100.00' })
@@ -45,14 +52,17 @@ struct SecurePaymentPage {
       Button('确认支付')
         .width('80%')
         .onClick(() => {
-          promptAction.showToast({ message: '模拟支付成功' });
+          this.getUIContext().getPromptAction().showToast({ message: '模拟支付成功' });
         })
 
-      Text("安全特性演示：\n1. 防截屏/录屏: 当前页面已开启防截屏，请尝试截图，预期会失败或得到黑屏。\n2. 安全键盘: 点击密码框，系统会弹出安全键盘。\n3. 后台安全提示: 将App滑到后台，在多任务卡片上应有安全提示（此特性依赖系统实现）。")
-        .padding(15)
-        .backgroundColor('#f0f0f0')
-        .borderRadius(10)
-        .margin({ top: 30 })
+      Column() {
+        InfoCard({
+          title: '操作指引',
+          body: '1. 当前页面禁止截屏，尝试抓取屏幕将得到黑屏。\n2. 点击密码输入框，系统弹出安全键盘。\n3. 切换到后台时观察卡片提示，作为安全态感知示例。',
+          tone: 'default'
+        })
+      }
+      .margin({ top: 30 })
     }
     .padding(20).width('100%')
   }

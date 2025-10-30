@@ -6,13 +6,13 @@
         "name": "debug",
         "type": "HarmonyOS",
         "material": {
-          "certpath": "/ABSOLUTE/PATH/TO/DEBUG_CERT.cer",
+          "certpath": "/Users/jisoo/.ohos/config/debug_VulnerableAppDemo25_iLoJ1A5xApW4G7gOAUWbA71SYrNyfdpmHUXiYQy2zQM=.cer",
           "keyAlias": "debugKey",
-          "keyPassword": "<DEBUG_KEY_PASSWORD>",
-          "profile": "/ABSOLUTE/PATH/TO/DEBUG_PROFILE.p7b",
+          "keyPassword": "0000001B732BD9A0FE459540DD78EB4E7FDE11C45C217E4A769C160BD9EC8723918DBD9EDE0A9B7E05601E",
+          "profile": "/Users/jisoo/.ohos/config/debug_VulnerableAppDemo25_iLoJ1A5xApW4G7gOAUWbA71SYrNyfdpmHUXiYQy2zQM=.p7b",
           "signAlg": "SHA256withECDSA",
-          "storeFile": "/ABSOLUTE/PATH/TO/DEBUG_STORE.p12",
-          "storePassword": "<DEBUG_STORE_PASSWORD>"
+          "storeFile": "/Users/jisoo/.ohos/config/debug_VulnerableAppDemo25_iLoJ1A5xApW4G7gOAUWbA71SYrNyfdpmHUXiYQy2zQM=.p12",
+          "storePassword": "0000001B5EDFAAB1244097FA2D009DC8F991F72ADD56D16E156CFED205A2C5C83A396E24D1487DF52464F5"
         }
       },
       {
@@ -32,7 +32,7 @@
     "products": [
       {
         "name": "default",
-        "signingConfig": "release",
+        "signingConfig": "debug",
         "targetSdkVersion": "5.1.1(19)",
         "compatibleSdkVersion": "5.0.5(17)",
         "runtimeOS": "HarmonyOS",

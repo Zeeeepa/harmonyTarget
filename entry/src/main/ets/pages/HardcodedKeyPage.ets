@@ -1,15 +1,18 @@
-import promptAction from '@ohos.promptAction';
+import { promptAction, PromptAction } from '@kit.ArkUI';
+import { InfoCard } from '../common/components/InfoCard';
+import { SectionHeader } from '../common/components/SectionHeader';
+import { KeyVault } from '../features/crypto/keyVault';
 
 @Entry
 @Component
 struct HardcodedKeyPage {
-  // VULNERABILITY: 密钥被硬编码在代码中
-  private readonly SECRET_KEY = "this_is_a_very_secret_key_123";
-  private readonly MAP_API_KEY = "AKfj-s93f_thisIsAFakeBaiduMapKey";
+  private readonly vault: KeyVault = new KeyVault();
   @State plainText: string = 'Hello HarmonyOS';
   @State encryptedText: string = '';
+  @State runtimeKey: string = '';
+  @State currentMode: 'insecure' | 'secure' = 'insecure';
+  @State isProcessing: boolean = false;
 
-  // 简单的异或加密算法，用于演示
   xorEncrypt(input: string, key: string): string {
     let output = '';
     for (let i = 0; i < input.length; i++) {
@@ -20,27 +23,68 @@ struct HardcodedKeyPage {
 
   build() {
     Column({ space: 20 }) {
-      Text('硬编码敏感信息 (ArkTS)').fontSize(24).fontWeight(FontWeight.Bold).margin({ bottom: 20 })
+      SectionHeader('硬编码敏感信息 (ArkTS)')
+
+      Row({ space: 10 }) {
+        this.renderModeButton('硬编码密钥', 'insecure');
+        this.renderModeButton('运行时密钥', 'secure');
+      }
+
+      InfoCard({
+        body: this.currentMode === 'insecure'
+          ? `原因：ArkTS 中持有密钥 "${this.vault.hardcodedKey}"，反编译即可直接读取。`
+          : '做法：运行时通过安全随机数生成密钥，不在源码或包体中出现真实密钥。',
+        tone: this.currentMode === 'insecure' ? 'warning' : 'success'
+      })
 
       TextInput({ placeholder: '输入要加密的文本', text: this.plainText })
         .onChange(val => this.plainText = val)
 
-      Button('使用硬编码密钥加密')
-        .onClick(() => {
-          this.encryptedText = this.xorEncrypt(this.plainText, this.SECRET_KEY);
-          promptAction.showToast({ message: '加密完成' });
-        })
+      Button(this.currentMode === 'insecure' ? '使用硬编码密钥加密' : '使用运行时密钥加密')
+        .backgroundColor('#007DFF')
+        .fontColor(Color.White)
+        .onClick(() => this.handleEncrypt())
+        .enabled(!this.isProcessing)
 
       Text('加密结果:')
       Text(this.encryptedText).fontColor(Color.Red)
 
-      Text('操作指引：\n请反编译本应用的HAP包，在ArkTS代码中搜索字符串，即可找到硬编码的密钥 "this_is_a_very_secret_key_123"。')
-        .padding(15)
-        .backgroundColor('#f0f0f0')
-        .borderRadius(10)
-        .margin({ top: 30 })
+      InfoCard({
+        title: '操作指引',
+        body: this.currentMode === 'insecure'
+          ? `1. 反编译 HAP 并搜索 "${this.vault.hardcodedKey}"，可直接定位密钥。\n2. 观察另一个硬编码参数：${this.vault.hardcodedMapApiKey}。`
+          : '1. 重新打包后搜索源码，运行时密钥不再出现。\n2. 可结合设备安全芯片/远程 KMS 动态下发密钥。',
+        tone: 'default'
+      })
     }
     .padding(20)
     .width('100%')
+  }
+
+  async handleEncrypt() {
+    try {
+      this.isProcessing = true;
+      let key = this.vault.hardcodedKey;
+      if (this.currentMode === 'secure') {
+        key = this.runtimeKey.length > 0 ? this.runtimeKey : await this.vault.generateRuntimeKey();
+        this.runtimeKey = key;
+      }
+      this.encryptedText = this.xorEncrypt(this.plainText, key);
+      this.getUIContext().getPromptAction().showToast({ message: '加密完成' });
+    } catch (error) {
+      this.getUIContext().getPromptAction().showToast({ message: `加密失败: ${error}` });
+    } finally {
+      this.isProcessing = false;
+    }
+  }
+
+  @Builder
+  renderModeButton(label: string, mode: 'insecure' | 'secure') {
+    Button(label)
+      .backgroundColor(this.currentMode === mode ? '#007DFF' : '#e0e0e0')
+      .fontColor(this.currentMode === mode ? Color.White : Color.Black)
+      .onClick(() => {
+        this.currentMode = mode;
+      });
   }
 }
