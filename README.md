@@ -1,4 +1,4 @@
-# VulnerableAppDemo21
+# HarmonyTarget
 
 一个专为安全培训打造的 HarmonyOS NEXT 示范应用。项目刻意实现了多种常见的移动端安全漏洞，用来演示在 ArkTS 代码中漏洞是如何产生、如何被发现以及潜在的风险点。
 
@@ -14,6 +14,10 @@
 - 字符串拼接导致的 SQLite SQL 注入
 - 模拟安全支付流程：截屏、防窥、输入保护等场景演练
 - 导出的 `SecretAbility` 页面可被外部组件直接拉起
+
+<img width="288" height="638" alt="image" src="https://github.com/user-attachments/assets/154ecae2-4de3-4ec5-9a8f-18b3f005e98d" />
+<img width="288" height="646" alt="image" src="https://github.com/user-attachments/assets/5665359d-ddc1-433e-ac62-43489f9eb372" />
+
 
 ## 项目结构
 
@@ -34,7 +38,8 @@
 
 - DevEco Studio 5.0 及以上（HarmonyOS NEXT 工具链）
 - DevEco Studio 自带的 Node.js / Hvigor 工具
-- HarmonyOS NEXT 真机或模拟器，API ≥ 19（5.1.1）
+- HarmonyOS NEXT 模拟器
+- 使用HarmonyOS NEXT 5.0.5(17)
 
 ## 签名说明
 
